@@ -9,9 +9,9 @@ The module requires you to have [ps4-waker](https://github.com/dhleong/ps4-waker
 * Install nodejs
 * Install ps4-waker
 * Download the Playstation app so you can setup a remote device
-* Start the pairing process ps4-waker -c .ps4-wake.credentials.json -d 10.0.0.4
+* Start the pairing process ps4-waker -c .ps4-wake.credentials.json -d <PS4_IP_ADDR>
 * Save credentials file in the config dir, default location is .ps4-wake.credentials.json in the config dir
-* Test that ps4-waker -c .ps4-wake.credentials.json -d 10.0.0.4 search works
+* Test that ps4-waker -c .ps4-wake.credentials.json -d <PS4_IP_ADDR> search works
 
 This docker images has node and ps4-waker installed https://hub.docker.com/r/hnicolaisen/home-assistant
 
@@ -24,18 +24,18 @@ Example config:
 ```yaml
 media_player:
   - platform: ps4
-    host: 10.0.0.4
+    host: <PS4_IP_ADDR>
 ```
 
 ## Component options
 * **host**: ip of the ps4
-* port: ps4-waker bind port
-* name: device name (Default: Playstation 4)
-* cmd: ps4 waker command (Default: ps4-waker)
-* filename: credentials filename for ps4-waker (Default: .ps4-wake.credentials.json)
-* games_filename: games json file, data file of the games started on your playstation (Default: ps4-games.json)
-* imagemap_json: imagemap json file (Default: https://github.com/hmn/ps4-imagemap/raw/master/games.json)
-* local_store: local www folder to use instead of imagemap (Default: None)
+* **port**: ps4-waker bind port
+* **name**: device name (Default: Playstation 4)
+* **cmd**: ps4 waker command (Default: ps4-waker)
+* **filename**: credentials filename for ps4-waker (Default: .ps4-wake.credentials.json)
+* **games_filename**: games json file, data file of the games started on your playstation (Default: ps4-games.json)
+* **imagemap_json**: imagemap json file (Default: https://github.com/hmn/ps4-imagemap/raw/master/games.json)
+* **local_store**: local www folder to use instead of imagemap (Default: None)
 
 ### games json file example
 The json games file is automaticly written and updates every time you start a game, but if you need to edit it manually the format is :
@@ -54,12 +54,12 @@ Multiple Playstation example with seperate games list and credentials for each p
 media_player:
   - platform: ps4
     name: 'Living room PS4'
-    host: 10.0.0.4
+    host: <PS4_IP_ADDR>
     filename: '.ps4-wake.livingroom.credentials.json'
     games_filename: 'ps4-games-livingroom.json'
   - platform: ps4
     name: 'Games room PS4'
-    host: 10.0.0.5
+    host: <OTHER_PS4_IP_ADDR>
     filename: '.ps4-wake.gamesroom.credentials.json'
     games_filename: 'ps4-games-gamesroom.json'
 ```
@@ -68,7 +68,7 @@ Alternative ps4-waker run command with custom config files
 ```yaml
 media_player:
   - platform: ps4
-    host: 10.0.0.4
+    host: <PS4_IP_ADDR>
     cmd: 'sudo ps4-waker'
     filename: 'ps4-wake.credentials.json'
     games_filename: 'ps4-games.json'
@@ -78,7 +78,7 @@ Load images from local www dir. Naming convention for images is www/{local_store
 ```yaml
 media_player:
   - platform: ps4
-    host: 10.0.0.4
+    host: <PS4_IP_ADDR>
     local_store: games
 ```
 

@@ -88,14 +88,14 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
     local_store = config.get(CONF_LOCAL_STORE)
     cmd = config.get(CONF_CMD)
 
-    ps4 = PS4Waker(host, port, cmd, credentials, games_filename)
-    add_devices([PS4Device(name, ps4, local_store)], True)
+    ps4 = PS4Waker(host, port, cmd, credentials)
+    add_devices([PS4Device(name, ps4, local_store, games_filename)], True)
 
 
 class PS4Device(MediaPlayerDevice):
     """Representation of a PS4."""
 
-    def __init__(self, name, ps4, local_store):
+    def __init__(self, name, ps4, local_store, games_filename):
         """Initialize the ps4 device."""
         self.ps4 = ps4
         self._name = name
@@ -107,6 +107,9 @@ class PS4Device(MediaPlayerDevice):
         self._current_source_id = None
         self._gamesmap = {}
         self._local_store = local_store
+        self._games_filename = games_filename
+        self.games = {}
+        self._load_games()
         self.update()
 
     @util.Throttle(MIN_TIME_BETWEEN_SCANS, MIN_TIME_BETWEEN_FORCED_SCANS)
@@ -122,6 +125,10 @@ class PS4Device(MediaPlayerDevice):
         if data.get('status') == 'Ok':
             if self._media_content_id is not None:
                 self._state = STATE_PLAYING
+                """Save current game"""
+                if self._media_content_id not in self.games.keys():
+                    self.games[data.get('running-app-titleid')] = data.get('running-app-name')
+                    self._save_games()
             else:
                 self._state = STATE_IDLE
         else:
@@ -204,7 +211,7 @@ class PS4Device(MediaPlayerDevice):
     @property
     def source_list(self):
         """List of available input sources."""
-        return sorted(self.ps4.games.values())
+        return sorted(self.games.values())
 
     def turn_off(self):
         """Turn off media player."""
@@ -227,7 +234,7 @@ class PS4Device(MediaPlayerDevice):
 
     def select_source(self, source):
         """Select input source."""
-        for titleid, game in self.ps4.games.items():
+        for titleid, game in self.games.items():
             if source == game:
                 self.ps4.start(titleid)
                 self._current_source_id = titleid
@@ -236,19 +243,35 @@ class PS4Device(MediaPlayerDevice):
                 self._media_title = game
                 self.update()
 
+    def _load_games(self):
+        try:
+            with open(self._games_filename, 'r') as f:
+                self.games = json.load(f)
+                f.close()
+        except FileNotFoundError:
+            self._save_games()
+        except ValueError as e:
+            _LOGGER.error('Games json file wrong: %s', e)
+
+    def _save_games(self):
+        try:
+            with open(self._games_filename, 'w') as f:
+                json.dump(self.games, f)
+                f.close()
+        except FileNotFoundError:
+            pass
+
 
 class PS4Waker(object):
-    """The class for handling the data retrieval."""
+    """Wrapper for ps4waker nodejs util, handles PS4 data retrieval."""
 
-    def __init__(self, host, port, cmd, credentials, games_filename):
+    def __init__(self, host, port, cmd, credentials):
         """Initialize the data object."""
         self._host = host
         self._port = port
         self._cmd = cmd
         self._credentials = credentials
-        self._games_filename = games_filename
-        self.games = {}
-        self._load_games()
+
 
     def _run(self, command):
         """Get the latest data with a shell command."""
@@ -275,27 +298,13 @@ class PS4Waker(object):
 
         return None
 
-    def _load_games(self):
-        try:
-            with open(self._games_filename, 'r') as f:
-                self.games = json.load(f)
-                f.close()
-        except FileNotFoundError:
-            self._save_games()
-        except ValueError as e:
-            _LOGGER.error('Games json file wrong: %s', e)
-
-    def _save_games(self):
-        try:
-            with open(self._games_filename, 'w') as f:
-                json.dump(self.games, f)
-                f.close()
-        except FileNotFoundError:
-            pass
-
     def wake(self):
         """Wake PS4 up."""
         return self._run('')
+
+    def standby(self):
+        """Set PS4 into standby mode."""
+        return self._run('standby')
 
     def search(self):
         """List current info."""
@@ -308,24 +317,10 @@ class PS4Waker(object):
             return {}
 
         try:
-            data = json.loads(value)
+            return json.loads(value)
         except json.decoder.JSONDecodeError as e:
             _LOGGER.error("Error decoding ps4 json : %s", e)
             return {}
-
-        """Save current game"""
-        if data.get('running-app-titleid'):
-            if data.get('running-app-titleid') not in self.games.keys():
-                game = {data.get('running-app-titleid'):
-                        data.get('running-app-name')}
-                self.games.update(game)
-                self._save_games()
-
-        return data
-
-    def standby(self):
-        """Set PS4 into standby mode."""
-        return self._run('standby')
 
     def start(self, titleId):
         """Start game using titleId."""

@@ -49,9 +49,11 @@ CONF_LOCAL_STORE = "local_store"
 
 PS4WAKER_CMD = 'ps4-waker'
 PS4WAKER_CONFIG_FILE = '.ps4-wake.credentials.json'
+PSN_STORE_URL = 'https://store.playstation.com/store/api/chihiro/00_09_000/titlecontainer/SE/en/999/{}_00/image?w=400&h=400'
+
 PS4_GAMES_FILE = 'ps4-games.json'
 MEDIA_IMAGE_DEFAULT = None
-MEDIA_IMAGEMAP_JSON = 'https://github.com/hmn/ps4-imagemap/raw/master/games.json'
+
 LOCAL_STORE = None
 
 MIN_TIME_BETWEEN_SCANS = timedelta(seconds=10)
@@ -63,7 +65,6 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
     vol.Optional(CONF_FILENAME, default=PS4WAKER_CONFIG_FILE): cv.string,
     vol.Optional(CONF_GAMES_FILENAME, default=PS4_GAMES_FILE): cv.string,
-    vol.Optional(CONF_IMAGEMAP_JSON, default=MEDIA_IMAGEMAP_JSON): cv.string,
     vol.Optional(CONF_LOCAL_STORE, default=LOCAL_STORE): cv.string,
     vol.Optional(CONF_CMD, default=PS4WAKER_CMD): cv.string
 })
@@ -84,18 +85,17 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
     port = config.get(CONF_PORT)
     credentials = hass.config.path(config.get(CONF_FILENAME))
     games_filename = hass.config.path(config.get(CONF_GAMES_FILENAME))
-    gamesmap_json = config.get(CONF_IMAGEMAP_JSON)
     local_store = config.get(CONF_LOCAL_STORE)
     cmd = config.get(CONF_CMD)
 
     ps4 = PS4Waker(host, port, cmd, credentials, games_filename)
-    add_devices([PS4Device(name, ps4, gamesmap_json, local_store)], True)
+    add_devices([PS4Device(name, ps4, local_store)], True)
 
 
 class PS4Device(MediaPlayerDevice):
     """Representation of a PS4."""
 
-    def __init__(self, name, ps4, gamesmap_json, local_store):
+    def __init__(self, name, ps4, local_store):
         """Initialize the ps4 device."""
         self.ps4 = ps4
         self._name = name
@@ -105,11 +105,8 @@ class PS4Device(MediaPlayerDevice):
         #self._media_image_url = MEDIA_IMAGE_DEFAULT
         self._current_source = None
         self._current_source_id = None
-        self._gamesmap_json = gamesmap_json
         self._gamesmap = {}
         self._local_store = local_store
-        if self._local_store is None:
-            self.load_gamesmap()
         self.update()
 
     @util.Throttle(MIN_TIME_BETWEEN_SCANS, MIN_TIME_BETWEEN_FORCED_SCANS)
@@ -140,16 +137,6 @@ class PS4Device(MediaPlayerDevice):
             self._media_content_id = None
             self._current_source = None
             self._current_source_id = None
-            #self._media_image_url = MEDIA_IMAGE_DEFAULT
-
-    def load_gamesmap(self):
-        import urllib.request, json
-
-        try:
-            with urllib.request.urlopen(self._gamesmap_json) as url:
-                self._gamesmap = json.loads(url.read().decode())
-        except Exception as e:
-            _LOGGER.error("gamesmap json file could not be loaded, %s" % e)
 
     @property
     def entity_picture(self):
@@ -202,7 +189,7 @@ class PS4Device(MediaPlayerDevice):
         if self._media_content_id is None:
             return MEDIA_IMAGE_DEFAULT
         try:
-            return self._gamesmap[self._media_content_id]
+            return PSN_STORE_URL.format(self._media_content_id)
         except KeyError:
             return MEDIA_IMAGE_DEFAULT
 

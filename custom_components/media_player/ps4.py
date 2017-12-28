@@ -114,13 +114,6 @@ class PS4Device(MediaPlayerDevice):
         """Retrieve the latest data."""
         data = self.ps4.search()
 
-        # if self._media_content_id is not None and \
-        #    self._media_content_id is not data.get('running-app-titleid'):
-        #     _LOGGER.debug("titleid changed from %s to %s fetch new image",
-        #                   self._media_content_id,
-        #                   data.get('running-app-titleid'))
-        #     self.update_image(data.get('running-app-titleid'))
-
         self._media_title = data.get('running-app-name')
         self._media_content_id = data.get('running-app-titleid')
         self._current_source = data.get('running-app-name')
@@ -155,7 +148,7 @@ class PS4Device(MediaPlayerDevice):
         if self._media_content_id is None:
             return None
 
-        filename = "/local/%s/%s.jpg" % (self._local_store, self._media_content_id)
+        filename = "/local/{}/{}.jpg".format(self._local_store, self._media_content_id)
         return filename
 
     @property
@@ -259,15 +252,14 @@ class PS4Waker(object):
 
     def _run(self, command):
         """Get the latest data with a shell command."""
-        bind_port = ''
-        if self._port not in['']:
+        
+        if self._port:
             bind_port = ' --bind-port ' + self._port
-
-        cmd = self._cmd + ' -c ' + self._credentials + \
-              ' -d ' + self._host + \
-              ' -t 5000' + bind_port + \
-              ' ' + \
-              command
+        else:
+            bind_port = ''
+            
+        cmd = '{} -c {} -d {} -t 5000 {} {}'.format(self._cmd, self._credentials,
+            self._host, bind_port, command)
         _LOGGER.debug('Running: %s', cmd)
 
         try:
@@ -315,15 +307,11 @@ class PS4Waker(object):
         if value.find("Could not detect any matching PS4 device") > -1:
             return {}
 
-        """Get data between `{}`"""
-        value = re.findall(r'{([^]]*)}', value)[0]
-        value = '{%s}' % value
-
         try:
             data = json.loads(value)
         except json.decoder.JSONDecodeError as e:
             _LOGGER.error("Error decoding ps4 json : %s", e)
-            data = {}
+            return {}
 
         """Save current game"""
         if data.get('running-app-titleid'):
@@ -341,8 +329,9 @@ class PS4Waker(object):
 
     def start(self, titleId):
         """Start game using titleId."""
-        return self._run('start ' + titleId)
+        return self._run('start {}'.format(titleId))
 
     def remote(self, key):
         """Send remote key press."""
-        return self._run('remote ' + key)
+        return self._run('remote {}'.format(key))
+

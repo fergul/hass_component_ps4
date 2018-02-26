@@ -1,5 +1,8 @@
 # Introduction
-ps4.py is a custom media_player component for home assistant, that uses the tool [ps4-waker](https://github.com/dhleong/ps4-waker) to communicate with your PS4
+Hass component PS4 is a custom media_player component for home assistant, that uses the tool [ps4-waker](https://github.com/dhleong/ps4-waker) to communicate with your PS4 to display now playing info, as well as remote start/stop functionality.
+
+## Changes
+Uses PSN store API for dynamic thumbnail retrieval, including games and apps.
 
 Because it uses the ps4-waker tool witch is nodejs and not python it has not been committed to the main repository.
 
